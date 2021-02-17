@@ -1,0 +1,31 @@
+{
+    "name": "kyrax324/laravel-queriplex",
+    "description": "A simple package to help building query builder between request inputs and allowed rules.",
+    "keywords": ["laravel", "queriplex", "query", "helper"],
+    "type": "library",
+    "require": {
+        "php": ">=7.2"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "kyrax324",
+            "email": "kyrax324@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kyrax324\\Queriplex\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kyrax324\\Queriplex\\QueriplexServiceProvider"
+            ],
+            "aliases": {
+                "Queriplex": "Kyrax324\\Queriplex\\Queriplex"
+            }
+        }
+    }
+}
