@@ -24,7 +24,7 @@
                 "Kyrax324\\Queriplex\\QueriplexServiceProvider"
             ],
             "aliases": {
-                "Queriplex": "Kyrax324\\Queriplex\\Queriplex"
+                "Queriplex": "Kyrax324\\Queriplex\\Facade"
             }
         }
     }
