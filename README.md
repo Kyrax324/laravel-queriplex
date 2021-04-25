@@ -1,36 +1,87 @@
 # Laravel Queriplex
 
-A simple package to help building query builder between request inputs and allowed rules.
+A simple package to help building query builder between request inputs and allowed rules. 
+
+- Filter and Sort
 
 ## Installation
 
-```bash
-composer required kyrax324/laravel-queriplex
+```sh
+composer require kyrax324/laravel-queriplex
 ```
 
 ## Available Methods
 
-### #Filter()
+### # make()
+
+Set the query builder.
 
 |   | Type | Description |
 |---|---|---|
-| @param_1 | Illuminate\Database\Eloquent\Builder | QueryBuilder to be build |
-| @param_2 | array | Requests |
-| @param_3 | array | Allowed rules |
+| @param_1 | Illuminate\Database\Eloquent\Builder | $query |
+| @return | $this | - |
+
+### # withFilters()
+
+Set the filterables rules.
+
+|   | Type | Description |
+|---|---|---|
+| @param_1 | array | $requests |
+| @param_2 | array | $filterRules |
+| @return | $this | - |
+
+### # withFilters()
+
+Set the sortable rules.
+
+|   | Type | Description |
+|---|---|---|
+| @param_1 | string|null | $key |
+| @param_2 | array | $sortRules |
+| @return | $this | - |
+
+### # apply()
+
+Apply the queriplex logic to query.
+
+|   | Type | Description |
+|---|---|---|
 | @return | Illuminate\Database\Eloquent\Builder | - |
 
+---
 
-Example:
+### # getFilterables()
+
+Get related array of filtering rules.
+
+|   | Type | Description |
+|---|---|---|
+| @return | array | $filterables |
+
+
+### # getFilterables()
+
+Get related sorting rule.
+
+|   | Type | Description |
+|---|---|---|
+| @return | string|null | $sortable |
+
+## Example:
 
 ```php
-	$request = [
-		"name" => 'abc',
-		"role_id" => '1',
-		"type" => '2' // will be ignore
-		"company_type" => "3"
-	];
+$request = [
+	"name" => 'abc',
+	"role_id" => '1',
+	"type" => '2' // will be ignore
+	"company_type" => "3"
+];
 
-	$users = Queriplex::filter( User::query(), $request, [
+$query = User::query();
+
+$queriplex = Queriplex::make($query)
+	->withFilters($request,[
 		'name' => "username", // will be convert to "$query->where('username',$value)"
 		'role_id' => 'role_id', // will be convert to "$query->where('role_id',$value)"
 		'company_type' => function($query, $value){ // callback
@@ -38,8 +89,16 @@ Example:
 				return $q->where('type', $value);
 			});
 		},
+	])
+	->withSort($request['sortBy'] ?? null, [
+		"id" => fn($query) => $query->orderBy('id', "ASC"), // php 7.4 - arrow function 
+		"total_credit" => function($query){
+			return $query->orderBy('total_credit', "DESC")->orderBy('id');
+		},
 	]);
 
-	$result = $users->get();
+$user = $queriplex->apply(); // apply queriplex logic and return query builder of User Model
+
+$result = $user->get();
 
 ```
