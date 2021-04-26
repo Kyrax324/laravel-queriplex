@@ -150,7 +150,9 @@ class Queriplex
     protected function applySort(Builder $query)
     {
         $sortable = $this->sortable;
-        $sortable($query);
+        if($sortable){
+            $sortable($query);
+        }
 
         return $query;
     }
