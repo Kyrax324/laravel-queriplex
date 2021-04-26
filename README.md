@@ -60,7 +60,7 @@ Get related array of filtering rules.
 | @return | array | $filterables |
 
 
-### # getFilterables()
+### # getSortable()
 
 Get related sorting rule.
 
