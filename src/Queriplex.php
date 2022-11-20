@@ -3,138 +3,96 @@
 namespace Kyrax324\Queriplex;
 
 use Closure;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 
 class Queriplex
 {
+	public $sortingKey = "sortBy";
 
-    /**
-     * The listing array of filtering rules.
-     *
-     * @var Array
-     */
-    public $filterRules = [];
+	public $selectedFilterRules;
+	public $selectedSortRules;
 
-    /**
-     * The listing array of sorting rules.
-     *
-     * @var Array
-     */
-    public $sortRules = [];
+	protected $queryBuilder;
+	protected $input = [];
+    protected $extraPayload;
 
-    /**
-     * The related array of filtering rules.
-     *
-     * @var Array
-     */
-    public $filterables = [];
+	public function __construct(Builder $queryBuilder, Array $input, $extraPayload = null)
+	{
+    	if($this->sortingKey == null ){
+    		throw new Exception("Variable 'sortingKey' cannot be null", 400);
+    	}
 
-    /**
-     * The related sorting rule.
-     *
-     * @var string|null
-     */
-    public $sortable = null;
-
-    /**
-     * The query builder of a eloquent model.
-     *
-     * @var \Illuminate\Database\Eloquent\Builder
-     */
-    public $query;
-
-    /**
-     * Get related array of filtering rules.
-     *
-     * @return Array
-     */
-    public function getFilterables()
-    {
-        return $this->filterables;
-    }
-
-    /**
-     * Get related sorting rule.
-     *
-     * @return string|null
-     */
-    public function getSortable()
-    {
-        return $this->sortable;
-    }
-
-    /**
-     * Set the query builder.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return $this
-     */
-    public function make(Builder $query)
-    {
-        $this->query = $query;
-        return $this;
-    }
-
-    /**
-     * Set the filterables rules.
-     *
-     * @param  Array  $request
-     * @param  Array  $filterRules
-     * @return $this
-     */
-    public function withFilters(Array $request, Array $filterRules)
-    {   
-        $this->filterRules = $filterRules;
-        $this->filterables = array_intersect_key($request,$filterRules);
-        return $this;
-    }
-
-    /**
-     * Set the sortable rules.
-     *
-     * @param  string|null  $key
-     * @param  Array  $filterRules
-     * @return $this
-     */
-    public function withSort($key, Array $sortRules)
-    {
-        $this->sortRules = $sortRules;
-        $this->sortable = $sortRules[$key] ?? null;
-        return $this;
-    }
+		$this->queryBuilder = $queryBuilder;
+		$this->input = $input;
+        $this->extraPayload = $extraPayload;
+	}
 
     /**
      * Apply the queriplex logic to query.
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function apply()
-    {
-        $query = $this->query;
+	public static function make(Builder $queryBuilder, Array $input) : Builder
+	{
+		$queriplex = new static($queryBuilder, $input);
+        $query = $queriplex->applyFilter();
 
-        $query = self::applyFilter($query);
-        $query = self::applySort($query);
+        if($queriplex->getInput($queriplex->sortingKey)){
+            $query = $queriplex->applySort();
+        }
+		return $query;
+	}
 
-        return $query;
-    }
+    /**
+     * Apply the queriplex logic for debuging.
+     *
+     * @return Queriplex
+     */
+	public static function debug(Builder $queryBuilder, Array $input)
+	{
+		$queriplex = new static($queryBuilder, $input);
+        $queriplex->applyFilter();
+
+        if($queriplex->getInput($queriplex->sortingKey)){
+            $queriplex->applySort();
+        }
+		return $queriplex;
+	}
+
+	public function filterRules()
+	{
+		return [];
+	}
+
+	public function sortRules()
+	{
+		return [];
+	}
+
+	protected function getInput($key)
+	{
+		return $this->input[$key] ?? null;
+	}
 
     /**
      * Apply the related filter rules to query.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    protected function applyFilter(Builder $query)
+    protected function applyFilter() : Builder
     {
-        $filterRules = $this->filterRules;
-        $filterables = collect($this->filterables);
+    	$query = $this->queryBuilder;
+        $filterRules = $this->filterRules();
+        $filterables = collect(array_intersect_key($this->input, $filterRules));
+        $this->selectedFilterRules = $filterables;
 
-        $filterables->each( function($item, $key) use ($query, $filterRules){
+        $filterables->each(function($item, $key) use ($query, $filterRules){
             $rule_instruction = $filterRules[$key];
             if($rule_instruction instanceof Closure){
-                $rule_instruction($query,$item);
+                $rule_instruction($query, $item);
             }else{
-                $query->where($rule_instruction,$item);
+                $query->where($rule_instruction, $item);
             }
         });
 
@@ -144,14 +102,27 @@ class Queriplex
     /**
      * Apply the related sort rule to query.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    protected function applySort(Builder $query)
+    protected function applySort() : Builder
     {
-        $sortable = $this->sortable;
-        if($sortable){
+		$query = $this->queryBuilder;
+
+        $sortRules = $this->sortRules();
+
+        $key = $this->getInput($this->sortingKey);
+
+        if( !in_array($key, array_keys($sortRules) )){
+    		throw new Exception("Sorting Rule '{$key}' is not set in sortRules()", 400);
+        }
+
+        $sortable = $sortRules[$key];
+        $this->selectedSortRules = $sortable;
+
+        if($sortable instanceof Closure){
             $sortable($query);
+        }else{
+        	throw new Exception("Items returned in sortRules() methods must be a anonymous function.", 400);
         }
 
         return $query;

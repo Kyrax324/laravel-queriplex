@@ -1,8 +1,6 @@
 # Laravel Queriplex
 
-A simple package to help building query builder between request inputs and allowed rules. 
-
-- Filter and Sort
+A simple package to help building query builder between request inputs and allowed rules.
 
 ## Installation
 
@@ -10,95 +8,84 @@ A simple package to help building query builder between request inputs and allow
 composer require kyrax324/laravel-queriplex
 ```
 
-## Available Methods
+## Usage
+### Generating Queriplex Classes
 
-### # make()
+Generate a queriplex class for `User` model
 
-Set the query builder.
+```sh
+php artisan make:queriplex UserQueriplex
+```
 
-|   | Type | Description |
-|---|---|---|
-| @param_1 | Illuminate\Database\Eloquent\Builder | $query |
-| @return | $this | - |
+** You may also publish the stub template file for customize purpose.
 
-### # withFilters()
+```sh
+php artisan queriplex:publish-stub
+```
 
-Set the filterables rules.
+### Setup Filter & Sort Rules
 
-|   | Type | Description |
-|---|---|---|
-| @param_1 | array | $requests |
-| @param_2 | array | $filterRules |
-| @return | $this | - |
+Fill up the necessarily filtering and sorting rules in the `UserQueriplex.php`
 
-### # withFilters()
-
-Set the sortable rules.
-
-|   | Type | Description |
-|---|---|---|
-| @param_1 | string|null | $key |
-| @param_2 | array | $sortRules |
-| @return | $this | - |
-
-### # apply()
-
-Apply the queriplex logic to query.
-
-|   | Type | Description |
-|---|---|---|
-| @return | Illuminate\Database\Eloquent\Builder | - |
-
----
-
-### # getFilterables()
-
-Get related array of filtering rules.
-
-|   | Type | Description |
-|---|---|---|
-| @return | array | $filterables |
-
-
-### # getSortable()
-
-Get related sorting rule.
-
-|   | Type | Description |
-|---|---|---|
-| @return | string|null | $sortable |
-
-## Example:
+Example:
 
 ```php
-$request = [
-	"name" => 'abc',
-	"role_id" => '1',
-	"type" => '2' // will be ignore
-	"company_type" => "3"
+
+public $sortingKey = "sortBy"; // #1
+
+public function filterRules()
+{
+	return [
+		// with callback function
+		'country' => function($query, $value){
+			$query->where("country_code", $value);
+		},
+		// with shortcut alias
+		'country' => 'country_code', // when isset 'country', where "country_code" = $value
+	];
+}
+
+public function sortRules()
+{
+	return [
+		"alphabet_asc" => fn ($query) => $query->orderBy('name', "ASC"),
+		"alphabet_desc" => fn ($query) => $query->orderBy('name', "DESC"),
+		"latest" => fn ($query) => $query->orderBy('created_at', "DESC"),
+	];
+}
+```
+
+## Use Case Example
+
+To get a result of users where country_code = "ABC" order by latest created time
+
+`UserController.php`
+
+```php
+use App\Queriplex\UserQueriplex;
+
+...
+
+// payload from request->validated()
+$payload = [
+	"country" => "ABC", // similar to when(isset(payload['country']), $callback)
+	"sortBy" => "latest", // sortingKey #1
 ];
 
 $query = User::query();
+$query = UserQueriplex::make($query, $payload);
 
-$queriplex = Queriplex::make($query)
-	->withFilters($request,[
-		'name' => "username", // will be convert to "$query->where('username',$value)"
-		'role_id' => 'role_id', // will be convert to "$query->where('role_id',$value)"
-		'company_type' => function($query, $value){ // callback
-			return $query->whereHas('company',function($q) use ($value){
-				return $q->where('type', $value);
-			});
-		},
-	])
-	->withSort($request['sortBy'] ?? null, [
-		"id" => fn($query) => $query->orderBy('id', "ASC"), // php 7.4 - arrow function 
-		"total_credit" => function($query){
-			return $query->orderBy('total_credit', "DESC")->orderBy('id');
-		},
-	]);
+$result = $query->get();
 
-$user = $queriplex->apply(); // apply queriplex logic and return query builder of User Model
-
-$result = $user->get();
+/**
+ * As result,
+ * filter rule "country_code" & sort rule "latest" will be applied
+ *
+ * SQL Statement:
+ * SELECT * from `users`
+ * WHERE `country_code` = "ABC"
+ * ORDER BY `created_at` DESC
+ */
 
 ```
+

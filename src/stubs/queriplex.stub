@@ -1,0 +1,34 @@
+<?php
+
+namespace {{namespace}};
+
+use Kyrax324\Queriplex\Queriplex;
+
+class {{class}} extends Queriplex
+{
+	public $sortingKey = "sortBy";
+
+    /**
+    * Get the filtering rules that apply to the model builder.
+    *
+    * @return array
+    */
+    public function filterRules()
+    {
+        return [
+            //
+        ];
+    }
+
+    /**
+    * Get the sorting rules that apply to the model builder.
+    *
+    * @return array
+    */
+    public function sortRules()
+    {
+        return [
+            //
+        ];
+    }
+}
