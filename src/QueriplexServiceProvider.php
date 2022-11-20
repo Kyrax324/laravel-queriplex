@@ -52,7 +52,7 @@ class QueriplexServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../stubs/queriplex.stub' => base_path('stubs/queriplex.stub'),
+                __DIR__.'/stubs/queriplex.stub' => base_path('/stubs/queriplex.stub'),
             ], ['queriplex-stub']);
         }
     }
