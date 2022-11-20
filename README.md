@@ -7,7 +7,7 @@ A simple package to help building query builder between request inputs and allow
 ## Installation
 
 ```sh
-composer require kyrax324/laravel-queriplex
+composer require kyrax324/laravel-queriplex:v1.0.0
 ```
 
 ## Available Methods
